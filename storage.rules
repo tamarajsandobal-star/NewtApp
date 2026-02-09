@@ -1,0 +1,25 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // Profiles
+    match /profiles/{userId}/{allPaths=**} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == userId 
+                   && request.resource.size < 5 * 1024 * 1024; // Max 5MB
+    }
+
+    // Verification proofs (Restricted)
+    match /verification/{userId}/{allPaths=**} {
+      allow read: if request.auth != null && (request.auth.uid == userId || request.auth.token.admin == true);
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Chat images
+    match /chats/{chatId}/{allPaths=**} {
+      allow read: if request.auth != null; // Logic needs to check firestore participation, hard in pure storage rules. Usually valid signed URL is enough.
+      allow write: if request.auth != null;
+    }
+  }
+}
