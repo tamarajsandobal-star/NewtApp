@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:neuro_social/core/theme/theme_provider.dart';
 import '../../auth/data/auth_repository.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -144,12 +145,23 @@ class SettingsScreen extends ConsumerWidget {
                      await batch.commit();
 
                      // 5. Delete Auth Account
-                     await user.delete(); 
-
-                     if (context.mounted) context.go('/login');
+                     try {
+                        await user.delete();
+                        if (context.mounted) context.go('/login');
+                     } catch (e) {
+                        if (e is FirebaseAuthException && e.code == 'requires-recent-login') {
+                            if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text("Security check: Please log out and back in to delete your account."))
+                                );
+                            }
+                        } else {
+                            throw e; // Rethrow others
+                        }
+                     }
                  } catch (e) {
                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error deleting account: $e. You may need to re-login.")));
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error deleting account: $e")));
                      }
                  }
                }

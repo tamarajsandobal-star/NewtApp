@@ -33,7 +33,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               _emailController.text.trim(),
               _passwordController.text.trim(),
             );
-        if (mounted) context.go('/discovery');
+        if (mounted) context.go('/dating');
       } catch (e) {
         if (mounted) {
            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Login failed: $e')));

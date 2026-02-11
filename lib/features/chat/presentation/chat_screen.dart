@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/chat_repository.dart';
 import '../../auth/data/auth_repository.dart';
-import '../../user/domain/user_model.dart';
+import '../../user/domain/models/app_user.dart';
 
 class ChatScreen extends ConsumerStatefulWidget {
   final String chatId;

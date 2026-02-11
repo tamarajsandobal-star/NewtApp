@@ -73,9 +73,37 @@ class ChatListScreen extends ConsumerWidget {
                              backgroundImage: user.photoUrl != null ? NetworkImage(user.photoUrl!) : null,
                              child: user.photoUrl == null ? const Icon(Icons.person) : null,
                         ),
-                        title: Text(
-                            "${user.displayName ?? 'Unknown'}, ${user.age ?? '?'}",
-                            style: TextStyle(fontWeight: unreadCount > 0 ? FontWeight.bold : FontWeight.normal),
+                        title: Row(
+                            children: [
+                                Expanded(
+                                  child: Text(
+                                      "${user.displayName ?? 'Unknown'}, ${user.age ?? '?'}",
+                                      style: TextStyle(fontWeight: unreadCount > 0 ? FontWeight.bold : FontWeight.normal),
+                                      overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                if (chat.mode != null)
+                                    Container(
+                                        margin: const EdgeInsets.only(left: 8),
+                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                        decoration: BoxDecoration(
+                                            color: chat.mode == 'dating' ? Colors.pink[50] : Colors.blue[50],
+                                            borderRadius: BorderRadius.circular(8),
+                                            border: Border.all(
+                                                color: chat.mode == 'dating' ? Colors.pink : Colors.blue,
+                                                width: 0.5
+                                            )
+                                        ),
+                                        child: Text(
+                                            chat.mode == 'dating' ? "Cita" : "Amistad",
+                                            style: TextStyle(
+                                                fontSize: 10, 
+                                                color: chat.mode == 'dating' ? Colors.pink : Colors.blue,
+                                                fontWeight: FontWeight.bold
+                                            ),
+                                        ),
+                                    )
+                            ],
                         ),
                         subtitle: Text(
                             chat.lastMessage.isNotEmpty ? chat.lastMessage : 'Start chatting!', 

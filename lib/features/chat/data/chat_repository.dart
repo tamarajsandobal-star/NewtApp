@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../domain/message_model.dart';
-import '../../user/domain/user_model.dart';
+import '../../user/domain/models/app_user.dart';
 
 // Provides stream of chats
 final chatListProvider = StreamProvider.family<List<ChatRoom>, String>((ref, userId) {
@@ -87,6 +87,7 @@ class ChatRoom {
     final DateTime lastMessageAt;
     final List<String> participants;
     final Map<String, int> unreadCounts; // { 'uid1': 2, 'uid2': 0 }
+    final String? mode; 
 
     ChatRoom({
       required this.id, 
@@ -94,6 +95,7 @@ class ChatRoom {
       required this.lastMessageAt, 
       required this.participants,
       this.unreadCounts = const {},
+      this.mode,
     });
 
     factory ChatRoom.fromMap(Map<String, dynamic> data, String id) {
@@ -103,6 +105,7 @@ class ChatRoom {
             lastMessageAt: (data['lastMessageAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
             participants: List<String>.from(data['participants'] ?? []),
             unreadCounts: Map<String, int>.from(data['unreadCounts'] ?? {}),
+            mode: data['mode'],
         );
     }
 }

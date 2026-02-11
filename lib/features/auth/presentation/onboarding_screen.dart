@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:neuro_social/core/widgets/custom_button.dart';
 import 'package:neuro_social/core/widgets/custom_text_field.dart';
-import '../../user/domain/user_model.dart';
+import '../../user/domain/models/app_user.dart';
 import '../data/auth_repository.dart';
 
 class OnboardingScreen extends ConsumerStatefulWidget {
@@ -21,22 +21,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   final _usernameController = TextEditingController();
 
   DateTime? _dob;
-  final _genderController = TextEditingController(); // We'll use this to store the dropdown value or just use a variable
   String? _selectedGender;
   final _bioController = TextEditingController();
-  
-  final List<String> _selectedTags = [];
-  String _goal = 'both'; // dating, friends, both
   bool _isLoading = false;
 
-  final List<String> _tags = [
-    'Gaming', 'Reading', 'Nature', 'Art', 'Music', 'Tech', 
-    'Cooking', 'Quiet Spaces', 'Anime', 'Movies', 'Coding', 
-    'Pets', 'Writing', 'History', 'Science'
-  ];
-
   final List<String> _genderOptions = [
-    'Feminino',
+    'Femenino', // Fixed typo
     'Masculino',
     'No binario',
     'Prefiero no decirlo',
@@ -46,7 +36,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   void dispose() {
     _nameController.dispose();
     _usernameController.dispose();
-    _genderController.dispose();
     _bioController.dispose();
     super.dispose();
   }
@@ -63,9 +52,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   Future<void> _selectDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: DateTime.now().subtract(const Duration(days: 365 * 18)), // Default to 18 years ago
+      initialDate: DateTime.now().subtract(const Duration(days: 365 * 18)),
       firstDate: DateTime(1900),
       lastDate: DateTime.now(),
+      locale: const Locale('es', 'ES'), // Attempt to set locale if supported, else defaults
     );
     if (picked != null && picked != _dob) {
       setState(() {
@@ -74,23 +64,37 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     }
   }
 
-  Future<void> _completeOnboarding() async {
+  Future<void> _completeSetup() async {
     if (!_formKey.currentState!.validate()) return;
+    
     if (_dob == null) {
        ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select your date of birth')),
+        const SnackBar(content: Text('Por favor selecciona tu fecha de nacimiento')),
       );
       return;
     }
+
+    final age = _calculateAge(_dob!);
+    if (age < 18) {
+       showDialog(
+         context: context,
+         builder: (ctx) => AlertDialog(
+           title: const Text("Restricción de Edad"),
+           content: const Text("Debes tener al menos 18 años para usar Newt."),
+           actions: [
+             TextButton(
+               onPressed: () => Navigator.of(ctx).pop(),
+               child: const Text("OK"),
+             )
+           ],
+         ),
+       );
+       return;
+    }
+
     if (_selectedGender == null) {
        ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select your gender')),
-      );
-      return;
-    }
-    if (_selectedTags.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select at least one interest')),
+        const SnackBar(content: Text('Por favor selecciona tu género')),
       );
       return;
     }
@@ -101,11 +105,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       final user = ref.read(authRepositoryProvider).currentUser;
       if (user == null) throw Exception('No authenticated user found');
 
-      final age = _calculateAge(_dob!);
-      if (age < 13) { // Minimal check
-         throw Exception('You must be at least 13 years old.');
-      }
-
       final username = _usernameController.text.trim().toLowerCase();
       
       // Check Uniqueness
@@ -115,36 +114,35 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           .get();
       
       if (usernameCheck.docs.isNotEmpty) {
-         // Check if it's NOT the current user (e.g. if editing) - but this is onboarding so user shouldn't exist fully yet or updating
          if (usernameCheck.docs.first.id != user.uid) {
              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Username already taken. Please choose another.')),
+                const SnackBar(content: Text('El nombre de usuario ya existe. Por favor elige otro.')),
              );
              setState(() => _isLoading = false);
              return;
          }
       }
 
+      // Create base user
       final appUser = AppUser(
         uid: user.uid,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
         username: username,
         displayName: _nameController.text.trim(),
-        age: age,
+        birthDate: _dob, // Fix: Use birthDate, not age
         gender: _selectedGender,
-        city: null, // Will be updated via Geolocation later
         bio: _bioController.text.trim(),
-        tags: _selectedTags,
-        goal: _goal,
+        tags: [], 
         photoUrl: user.photoURL, 
       );
 
-      // Save to Firestore
       await FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
           .set(appUser.toMap());
 
-      if (mounted) context.go('/discovery');
+      if (mounted) context.go('/mode-selection'); 
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -159,7 +157,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Setup Your Profile")),
+      appBar: AppBar(title: const Text("Configuración de Perfil")),
       body: SafeArea(
         child: Form(
           key: _formKey,
@@ -169,23 +167,25 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 child: ListView(
                   padding: const EdgeInsets.all(24),
                   children: [
-                     Text("Tell us about yourself", style: Theme.of(context).textTheme.titleLarge),
-                     const SizedBox(height: 16),
+                     Text("Detalles Básicos", style: Theme.of(context).textTheme.titleLarge),
+                     const SizedBox(height: 8),
+                     Text("Estos detalles son obligatorios para usar Newt.", style: Theme.of(context).textTheme.bodyMedium),
+                     const SizedBox(height: 24),
                      
                      CustomTextField(
-                       label: 'Display Name (e.g. Alex)',
+                       label: 'Nombre (ej. Alex)',
                        controller: _nameController,
-                       validator: (v) => v!.isEmpty ? 'Required' : null,
+                       validator: (v) => v!.isEmpty ? 'Obligatorio' : null,
                      ),
                      const SizedBox(height: 12),
                      
                      CustomTextField(
-                       label: 'Unique Username (@username)',
+                       label: 'Usuario Único (@usuario)',
                        controller: _usernameController,
                        validator: (v) {
-                         if (v == null || v.isEmpty) return 'Required';
-                         if (v.length < 3) return 'At least 3 characters';
-                         if (!RegExp(r'^[a-zA-Z0-9_]+$').hasMatch(v)) return 'Only letters, numbers, _';
+                         if (v == null || v.isEmpty) return 'Obligatorio';
+                         if (v.length < 3) return 'Al menos 3 caracteres';
+                         if (!RegExp(r'^[a-zA-Z0-9_]+$').hasMatch(v)) return 'Solo letras, números y guión bajo';
                          return null;
                        },
                      ),
@@ -196,7 +196,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                        onTap: () => _selectDate(context),
                        child: InputDecorator(
                          decoration: InputDecoration(
-                           labelText: 'Date of Birth',
+                           labelText: 'Fecha de Nacimiento (+18)',
                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                            filled: true,
                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
@@ -206,8 +206,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                            children: [
                              Text(
                                _dob == null 
-                                 ? 'Select Date' 
-                                 : '${_dob!.day}/${_dob!.month}/${_dob!.year} (${_calculateAge(_dob!)} yo)',
+                                 ? 'Seleccionar Fecha' 
+                                 : '${_dob!.day}/${_dob!.month}/${_dob!.year} (${_calculateAge(_dob!)} años)',
                                style: _dob == null ? TextStyle(color: Theme.of(context).hintColor) : null,
                              ),
                              const Icon(Icons.calendar_today),
@@ -221,7 +221,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                      DropdownButtonFormField<String>(
                        value: _selectedGender,
                        decoration: InputDecoration(
-                         labelText: 'Gender',
+                         labelText: 'Género',
                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                          filled: true,
                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
@@ -230,63 +230,22 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                          return DropdownMenuItem<String>(
                            value: value,
                            child: Text(value),
-                         );
+                           );
                        }).toList(),
                        onChanged: (newValue) {
                          setState(() {
                            _selectedGender = newValue;
                          });
                        },
-                       validator: (v) => v == null ? 'Required' : null,
+                       validator: (v) => v == null ? 'Obligatorio' : null,
                      ),
 
                      const SizedBox(height: 12),
                      
                      CustomTextField(
-                        label: 'Bio (Short description)',
+                        label: 'Biografía',
                         controller: _bioController,
                         maxLines: 3,
-                     ),
-                     const SizedBox(height: 24),
-        
-                     Text("What are you looking for?", style: Theme.of(context).textTheme.titleMedium),
-                     const SizedBox(height: 8),
-                     SegmentedButton<String>(
-                       segments: const [
-                         ButtonSegment(value: 'dating', label: Text('Dating')),
-                         ButtonSegment(value: 'friends', label: Text('Friends')),
-                         ButtonSegment(value: 'both', label: Text('Both')),
-                       ], 
-                       selected: {_goal},
-                       onSelectionChanged: (Set<String> newSelection) {
-                         setState(() {
-                           _goal = newSelection.first;
-                         });
-                       },
-                     ),
-                     const SizedBox(height: 24),
-                     
-                     Text("Your Interests", style: Theme.of(context).textTheme.titleMedium),
-                     const SizedBox(height: 8),
-                     Wrap(
-                       spacing: 8,
-                       runSpacing: 8,
-                       children: _tags.map((tag) {
-                         final isSelected = _selectedTags.contains(tag);
-                         return FilterChip(
-                           label: Text(tag),
-                           selected: isSelected,
-                           onSelected: (bool selected) {
-                             setState(() {
-                               if (selected) {
-                                 _selectedTags.add(tag);
-                               } else {
-                                 _selectedTags.remove(tag);
-                               }
-                             });
-                           },
-                         );
-                       }).toList(),
                      ),
                   ],
                 ),
@@ -294,8 +253,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               Padding(
                 padding: const EdgeInsets.all(24.0),
                 child: CustomButton(
-                  text: "Complete Profile",
-                  onPressed: _completeOnboarding,
+                  text: "Siguiente: Selección de Modo",
+                  onPressed: _completeSetup,
                   isLoading: _isLoading,
                 ),
               )

@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../auth/data/auth_repository.dart';
-import '../../user/domain/user_model.dart';
+import '../domain/models/app_user.dart';
 import 'package:neuro_social/core/widgets/async_value_widget.dart';
 
 import 'package:neuro_social/features/user/presentation/user_providers.dart';
@@ -56,8 +56,7 @@ class ProfileScreen extends ConsumerWidget {
                      "${user.age ?? ''} • ${user.gender ?? ''}",
                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey),
                    ),
-                if (user.city != null)
-                   Text(user.city!, style: Theme.of(context).textTheme.bodyMedium),
+
 
                 const SizedBox(height: 20),
                 const Divider(),
@@ -82,9 +81,7 @@ class ProfileScreen extends ConsumerWidget {
                  const SizedBox(height: 20),
                  OutlinedButton(
                      onPressed: () {
-                         // Edit profile logic (can reuse Onboarding Screen or new Edit Screen)
-                         // For MVP simplicity, let's just show a snackbar or navigate to onboarding to "edit"
-                         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Edit not implemented yet, but data is real now!')));
+                         context.go('/profile/edit');
                      },
                      child: const Text("Edit Profile"),
                  )

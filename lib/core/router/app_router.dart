@@ -14,12 +14,29 @@ import '../../features/chat/presentation/chat_list_screen.dart';
 import '../../features/chat/presentation/chat_screen.dart';
 import '../../features/events/presentation/events_list_screen.dart';
 import '../../features/user/presentation/profile_screen.dart';
+import '../../features/user/presentation/edit_profile_screen.dart';
 import '../../features/user/presentation/settings_screen.dart';
 import '../../features/user/presentation/verification_screen.dart';
+import '../../features/user/presentation/mode_selection_screen.dart';
+import '../../features/user/presentation/edit_profile/edit_profile_hub_screen.dart';
+import '../../features/user/presentation/edit_profile/photos_editor_screen.dart';
+import '../../features/user/presentation/edit_profile/basic_info_editor_screen.dart';
+import '../../features/user/presentation/edit_profile/about_me_editor_screen.dart';
+import '../../features/user/presentation/edit_profile/neuro_editor_screen.dart';
+import '../../features/user/presentation/edit_profile/deep_interests_editor_screen.dart';
+import '../../features/user/presentation/edit_profile/limits_editor_screen.dart';
+import '../../features/user/presentation/edit_profile/dating_settings_editor_screen.dart';
+import '../../features/user/presentation/edit_profile/friendship_settings_editor_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     initialLocation: '/login',
+    redirect: (context, state) {
+      if (state.uri.toString() == '/discovery') {
+        return '/dating';
+      }
+      return null;
+    },
     routes: [
       GoRoute(
         path: '/login',
@@ -33,14 +50,26 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/onboarding',
         builder: (context, state) => const OnboardingScreen(),
       ),
+      GoRoute(
+        path: '/mode-selection',
+        builder: (context, state) => const ModeSelectionScreen(),
+      ),
       ShellRoute(
         builder: (context, state, child) {
           return ScaffoldWithBottomNavBar(child: child);
         },
         routes: [
           GoRoute(
-            path: '/discovery',
-            builder: (context, state) => const DiscoveryScreen(),
+            path: '/dating',
+            builder: (context, state) => const DiscoveryScreen(mode: 'dating'),
+          ),
+          GoRoute(
+            path: '/friendship',
+            builder: (context, state) => const DiscoveryScreen(mode: 'friendship'),
+          ),
+          GoRoute(
+            path: '/community',
+            builder: (context, state) => const EventsListScreen(), // Placeholder for Community
           ),
           GoRoute(
             path: '/chats',
@@ -53,12 +82,24 @@ final routerProvider = Provider<GoRouter>((ref) {
             ],
           ),
           GoRoute(
-            path: '/events',
-            builder: (context, state) => const EventsListScreen(),
-          ),
-          GoRoute(
             path: '/profile',
             builder: (context, state) => const ProfileScreen(),
+            routes: [
+               GoRoute(
+                 path: 'edit',
+                 builder: (context, state) => const EditProfileHubScreen(),
+                 routes: [
+                    GoRoute(path: 'photos', builder: (c, s) => const PhotosEditorScreen()),
+                    GoRoute(path: 'basic', builder: (c, s) => const BasicInfoEditorScreen()),
+                    GoRoute(path: 'about', builder: (c, s) => const AboutMeEditorScreen()),
+                    GoRoute(path: 'neuro', builder: (c, s) => const NeuroEditorScreen()),
+                    GoRoute(path: 'deep-interests', builder: (c, s) => const DeepInterestsEditorScreen()),
+                    GoRoute(path: 'limits', builder: (c, s) => const LimitsEditorScreen()),
+                    GoRoute(path: 'dating-settings', builder: (c, s) => const DatingSettingsEditorScreen()),
+                    GoRoute(path: 'friendship-settings', builder: (c, s) => const FriendshipSettingsEditorScreen()),
+                 ]
+               ),
+            ],
           ),
         ],
       ),
@@ -107,7 +148,9 @@ class ScaffoldWithBottomNavBar extends ConsumerWidget {
         onTap: (int idx) => _onItemTapped(idx, context),
         type: BottomNavigationBarType.fixed,
         items: [
-          const BottomNavigationBarItem(icon: Icon(Icons.style), label: 'Discover'),
+          const BottomNavigationBarItem(icon: Icon(Icons.favorite), label: 'Citas'),
+          const BottomNavigationBarItem(icon: Icon(Icons.people), label: 'Amistad'),
+          const BottomNavigationBarItem(icon: Icon(Icons.groups), label: 'Comunidad'),
           BottomNavigationBarItem(
               icon: Badge(
                   isLabelVisible: unreadCount > 0,
@@ -116,8 +159,7 @@ class ScaffoldWithBottomNavBar extends ConsumerWidget {
               ),
               label: 'Chats'
           ),
-          const BottomNavigationBarItem(icon: Icon(Icons.event), label: 'Events'),
-          const BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
+          const BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Perfil'),
         ],
       ),
     );
@@ -125,25 +167,29 @@ class ScaffoldWithBottomNavBar extends ConsumerWidget {
 
   static int _calculateSelectedIndex(BuildContext context) {
     final String location = GoRouterState.of(context).uri.toString();
-    if (location.startsWith('/discovery')) return 0;
-    if (location.startsWith('/chats')) return 1;
-    if (location.startsWith('/events')) return 2;
-    if (location.startsWith('/profile')) return 3;
+    if (location.startsWith('/dating')) return 0;
+    if (location.startsWith('/friendship')) return 1;
+    if (location.startsWith('/community')) return 2;
+    if (location.startsWith('/chats')) return 3;
+    if (location.startsWith('/profile')) return 4;
     return 0;
   }
 
   void _onItemTapped(int index, BuildContext context) {
     switch (index) {
       case 0:
-        GoRouter.of(context).go('/discovery');
+        GoRouter.of(context).go('/dating');
         break;
       case 1:
-        GoRouter.of(context).go('/chats');
+        GoRouter.of(context).go('/friendship');
         break;
       case 2:
-        GoRouter.of(context).go('/events');
+        GoRouter.of(context).go('/community');
         break;
       case 3:
+        GoRouter.of(context).go('/chats');
+        break;
+      case 4:
         GoRouter.of(context).go('/profile');
         break;
     }

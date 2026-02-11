@@ -27,7 +27,7 @@ class NeuroSocialApp extends ConsumerWidget {
     final isLowStimulation = ref.watch(lowStimulationModeProvider);
 
     return MaterialApp.router(
-      title: 'NeuroSocial',
+      title: 'NewtApp',
       theme: isLowStimulation ? AppTheme.lowStimulationTheme : AppTheme.lightTheme,
       darkTheme: isLowStimulation ? AppTheme.lowStimulationTheme : AppTheme.darkTheme,
       routerConfig: router,

@@ -1,6 +1,6 @@
 {
-    "name": "neuro_social",
-    "short_name": "neuro_social",
+    "name": "NewtApp",
+    "short_name": "NewtApp",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
